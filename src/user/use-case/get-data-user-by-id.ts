@@ -1,0 +1,105 @@
+import { resolve } from "path";
+
+const environment = process.env.ENVIRONMENT!.toLowerCase()
+const secretKeyAdmin = ((environment === 'production') ? process.env.JWT_ADMIN_KEY : process.env.DEV_JWT_ADMIN_KEY)
+var jwt = require('jsonwebtoken');
+require('dotenv').config();
+
+export default function makeGetUserById({usersDb}){
+    return async function getUserById(body){
+        try {
+            
+        const token = await body.bodyparam.key
+        var decoded = await jwt.verify(token, secretKeyAdmin)
+        if(typeof body.bodyparam.key === "undefined" || typeof body.bodyparam.userId === "undefined"){
+            const ret = {
+                status : false,
+                response_code : 400,
+                message : 'Key/userId field is required'
+              }
+            return ret
+        }
+        if(body.bodyparam.key === "" || body.bodyparam.userId === "" ||body.bodyparam.key === null || body.bodyparam.userId === null){
+            const ret = {
+                status : false,
+                response_code : 400,
+                message : 'Key/userId cannot be null'
+              }
+            return ret
+        }
+        const resData = await setupData(body)
+        return resData
+          
+        } catch (error) {
+            console.log('err',error);
+            const ret = {
+                status: false,
+                response_code: 400,
+                message: error.message   
+               }
+               return ret
+        }
+    }
+
+    async function setupData(body){
+        try {
+            const setupData = await usersDb.getDataUserById(body)
+            const provinceName = await usersDb.getProvinceById(body)
+            const cityName = await usersDb.getCityById(body)
+            const subdistrictName = await usersDb.getSubdistrictById(body)            
+            
+            //Membership-plan
+            const memberShipPlanId = setupData.dataMembershipPlan.membership_plan_id
+            const name = setupData.dataMembershipPlan.name
+            const price = setupData.dataMembershipPlan.price
+            const netPrice = setupData.dataMembershipPlan.net_price
+            const percentFee = setupData.dataMembershipPlan.percent_fee
+            const joinCashback = setupData.dataMembershipPlan.join_cashback
+            const personalSalesFee = setupData.dataMembershipPlan.personal_sales_fee
+            const description = setupData.dataMembershipPlan.description
+
+            //set-data
+            const id = setupData.dataUserById.id
+            const email = setupData.dataUserById.email
+            const fullName = setupData.dataUserById.full_name
+            const noKtp = setupData.dataUserById.no_ktp
+            const noNpwp = setupData.dataUserById.no_npwp
+            const ktpImage = setupData.dataUserById.ktp_image
+            const gender = setupData.dataUserById.gender
+            const birthdate = setupData.dataUserById.birthdate
+            const province = provinceName
+            const provinceId = setupData.dataUserById.province_id
+            const cityId = setupData.dataUserById.city_id
+            const city = cityName
+            const subdistrictId = setupData.dataUserById.subdistrict_id
+            const subdistrict = subdistrictName
+            const zipCode = setupData.dataUserById.zip_code
+            const address = setupData.dataUserById.address
+            const phone = setupData.dataUserById.phone
+            const bankName = setupData.dataUserById.bank_name
+            const accountName = setupData.dataUserById.account_name
+            const rekNo = setupData.dataUserById.rek_no
+            const referralFrom = setupData.dataUserById.referral_from
+            const referralId = setupData.dataUserById.referral_id
+            const membershipPlan = {
+                memberShipPlanId,
+                name,
+                price,
+                netPrice,
+                percentFee,
+                joinCashback,
+                personalSalesFee,
+                description
+             }
+            const onboard = setupData.dataUserById.onboard
+            
+
+            const data = {id,email,fullName,noKtp,noNpwp,ktpImage,gender,birthdate,provinceId,cityId,city,subdistrictId,
+                           subdistrict,zipCode,address,phone,bankName,accountName,rekNo,referralFrom,referralId,membershipPlan,onboard}
+            return data
+            
+        } catch (error) {
+            console.log('error',error);
+        }
+    }
+}
